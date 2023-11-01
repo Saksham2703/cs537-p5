@@ -539,25 +539,53 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
   cprintf("in mmap\n");
   cprintf("addr mmap:%d\n", addr);
 	struct proc *p = myproc();
-	// if not map fixed two forloops one through addresses and inner through va array
-	if(flags == 0x000e){// anon + fixed + shared
-    cprintf("yes flags\n");
-		for(int i = 0; i < 32; i++){
-			if(p->va[i].valid == 0){
-				continue;
-			}else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr) && p->va[i].valid){
-				return -1;
-			}
-		}
-		// if we have reached here addr is available do whatever comes next
-    // cprintf("ADDR:%d\n", addr);
-    mappages(p->pgdir, addr, length, V2P(kalloc()), 0);
-    cprintf("ADDR:%d\n", addr);
+  int numpages = (length / PGSIZE) + ((length % PGSIZE) != 0);
+  // cprintf("num pages %d\n", numpages);
+  int index = 0;
 
-    return (int) addr;
-	}
-	cprintf("return -1\n");
-	return -1;
+	// if not map fixed two forloops one through addresses and inner through va array
+  if((flags & MAP_FIXED) == MAP_FIXED){
+    for(int i = 0; i < 32; i++){
+			if(p->va[i].valid == 0){
+        index = i;
+				break;
+			} else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr)){ // if addr wanted is already taken
+				return -1;
+			} else if(p->va[i].start_ad > addr){
+        if((p->va[i].start_ad - addr) < length){
+          return -1;
+        }
+        else{
+          index = i;
+          break;
+        }
+      }else{
+        cprintf("error in map_fixed\n");
+        return -1;
+      }
+    }
+  }else{
+
+  }
+  
+  for (int i = 0; i < numpages; i++){
+    mappages(p->pgdir, (addr + (i * PGSIZE)), PGSIZE, V2P(kalloc()), 0);
+  }
+
+  // shift proc va array
+  for (int i = 30; i > index; i--) {
+    p->va[i + 1] = p->va[i];
+  }
+  p->va[index].valid = 1;
+  p->va[index].start_ad = addr;
+  p->va[index].end_ad = addr + (PGSIZE * numpages) - 1;
+  p->va[index].fd = fd;
+  p->va[index].len = length;
+  p->va[index].prot = prot;
+  p->va[index].flags = flags;
+
+  cprintf("ADDR:%d\n", addr);
+  return (int) p->va[index].start_ad;
 }
 
 int 
