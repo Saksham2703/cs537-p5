@@ -591,5 +591,23 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 int 
 munmap(void *addr, int length) 
 {
+  struct proc *p = myproc();
+  int index = -1;
+  for(int i = 0; i < 32; i++){
+    if(p->va[i].start_ad == addr){
+      index = i;
+      break;
+    }
+  }
+  if(index == -1){
+    return -1;
+  }
+  for(int i = index; i < 32; i++){
+    if(p->va[i].valid == 0){
+      break;
+    }else{
+      p->va[i] = p->va[i + 1];
+    }
+  }
   return 0;
 }

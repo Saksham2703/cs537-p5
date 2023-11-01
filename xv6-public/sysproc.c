@@ -198,7 +198,16 @@ int sys_munmap(void){
 		return -1;
 	}
 
-	munmap(&addr, length);
-	return 0;
+	// invalid length
+	if (length <= 0) {
+		return -1;
+	}
+
+	// addr within bounds
+	if (addr < (void *)MMAPSTART || addr >= (void *)KERNBASE){
+		return -1;
+	}
+
+	return munmap(addr, length);
 }
 
