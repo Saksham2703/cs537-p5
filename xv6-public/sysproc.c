@@ -8,6 +8,25 @@
 #include "proc.h"
 #include "mmap.h"
 
+// Fetch the nth word-sized system call argument as a file descriptor
+// and return both the descriptor and the corresponding struct file.
+static int
+argfd(int n, int *pfd, struct file **pf)
+{
+  int fd;
+  struct file *f;
+
+  if(argint(n, &fd) < 0)
+    return -1;
+  if(fd < 0 || fd >= NOFILE || (f=myproc()->ofile[fd]) == 0)
+    return -1;
+  if(pfd)
+    *pfd = fd;
+  if(pf)
+    *pf = f;
+  return 0;
+}
+
 int
 sys_fork(void)
 {
@@ -127,7 +146,7 @@ int sys_mmap(void){
 	}
 
 	// if MAP_FIXED set
-	if ((flags & MAP_FIXED) / 8 == 1) {
+	if ((flags & MAP_FIXED) == MAP_FIXED) {
 		// check valid addr
 		if (addr < (void *)MMAPSTART || addr >= (void *)KERNBASE)
 		{
@@ -137,14 +156,14 @@ int sys_mmap(void){
 		if ((uint) addr % PGSIZE != 0) {
 			return -1;
 		}
-		// map cant be fixed and anonymous at the same time
-		if((flags & MAP_ANONYMOUS) / 4 == 1){
+		// map can't be fixed and anonymous at the same time
+		if((flags & MAP_ANONYMOUS) == MAP_ANONYMOUS){
 			return -1;
 		}
 	}
 
 	// if MAP_SHARED and MAP_PRIVATE set together
-	if((flags & (MAP_SHARED || MAP_PRIVATE)) == 3){
+	if((flags & (MAP_SHARED | MAP_PRIVATE)) == 3){
 		return -1;
 	}
 
