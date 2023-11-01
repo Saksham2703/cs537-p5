@@ -98,6 +98,7 @@ int sys_mmap(void){
 	int prot;
 	int flags;
 	int fd;
+	struct file *pf;
 	int offset;
 	
 	if(argptr(0, (void*)&addr) < 0){
@@ -112,7 +113,7 @@ int sys_mmap(void){
 	if(argint(3, &flags) < 0){
 		return -1;
 	}
-	if(argint(4, &fd) < 0){
+	if(argfd(4, &fd, &pf) < 0){ // changed this from argfd to argint
 		return -1;
 	}
 	if(argint(5, &offset) < 0){
@@ -135,6 +136,15 @@ int sys_mmap(void){
 		if ((int) addr % PGSIZE != 0) {
 			return -1;
 		}
+		// map cant be fixed and anonymous at the same time
+		if((flags & MAP_ANONYMOUS) / 4 == 1){
+			return -1;
+		}
+	}
+
+	// if MAP_SHARED and MAP_PRIVATE set together
+	if((flags & (MAP_SHARED || MAP_PRIVATE)) == 3){
+		return -1;
 	}
 
 	mmap(&addr, &length, &prot, &flags, &fd, &offset);
