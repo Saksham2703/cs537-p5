@@ -138,6 +138,8 @@ int sys_mmap(void){
 		}
 	}
 
+	// error if map anonymous and ?? both set
+
 	mmap(&addr, length, prot, flags, fd, offset);
 	return 0;
 }

@@ -536,7 +536,7 @@ procdump(void)
 void* 
 mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 	struct proc *p = myproc();
-	//if not map fixed two forloops one through addresses and inner through va array
+	// if not map fixed two forloops one through addresses and inner through va array
 	if(flags == 0x000e){// anon + fixed + shared
 		for(int i = 0; i < 32; i++){
 			if(p->va[i].valid == 0){
