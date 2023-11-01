@@ -35,13 +35,13 @@ struct context {
 // virtual address
 struct virtualAddress {
   int valid;
-  (void*) start_ad;
-  (void*) end_ad;
+  void* start_ad;
+  void* end_ad;
   int len;
   int prot;
   int flags;
   int fd;
-}
+};
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
@@ -60,6 +60,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct virtualAddress va[32] // VAs
 };
 
 // Process memory is laid out contiguously, low addresses first:
