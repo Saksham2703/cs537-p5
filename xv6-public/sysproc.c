@@ -100,7 +100,6 @@ int sys_mmap(void){
 	int fd;
 	int offset;
 
-	// see if use argptr?
 	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
@@ -113,7 +112,7 @@ int sys_mmap(void){
 	if(argint(3, &flags) < 0){
 		return -1;
 	}
-	if(argint(4, &fd) < 0){
+	if(argint(4, &fd) < 0){ // use argfd in proc.c?
 		return -1;
 	}
 	if(argint(5, &offset) < 0){
@@ -129,11 +128,12 @@ int sys_mmap(void){
 	// if MAP_FIXED set
 	if ((flags & MAP_FIXED) / 8 == 1) {
 		// check valid addr
-		if ((int) addr < MMAPSTART || (int) addr >= KERNBASE) {
-			return -1;
+		if (addr < (void *)MMAPSTART || addr >= (void *)KERNBASE)
+		{
+	  return -1;
 		}
 		// check addr multiple of page size
-		if ((int) addr % PGSIZE != 0) {
+		if ((uint) addr % PGSIZE != 0) {
 			return -1;
 		}
 	}
@@ -146,12 +146,14 @@ int sys_mmap(void){
 int sys_munmap(void){
 	void* addr;
 	int length;
+
 	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
 	if(argint(0, &length) < 0){
 		return -1;
 	}
+
 	munmap(&addr, length);
 	return 0;
 }
