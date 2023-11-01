@@ -112,7 +112,7 @@ sys_uptime(void)
 
 // mmap
 int sys_mmap(void){
-	cprintf("in sys_mmap\n");
+	// cprintf("in sys_mmap\n");
 	void* addr;
 	int length;
 	int prot;
@@ -178,14 +178,12 @@ int sys_mmap(void){
 		return -1;
 	}
 
-	cprintf("got all args\n");
+	// cprintf("got all args\n");
 
-	
 
 	// error if map anonymous and ?? both set
 	cprintf("addr passing in:%d\n", addr);
-	mmap(addr, length, prot, flags, fd, offset);
-	return 0;
+	return mmap(addr, length, prot, flags, fd, offset);
 }
 
 // munmap

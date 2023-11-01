@@ -534,7 +534,7 @@ procdump(void)
   }
 }
 
-void* 
+int
 mmap(void* addr, int length, int prot, int flags, int fd, int offset){
   cprintf("in mmap\n");
   cprintf("addr mmap:%d\n", addr);
@@ -546,16 +546,18 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 			if(p->va[i].valid == 0){
 				continue;
 			}else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr) && p->va[i].valid){
-				return (void*) -1;
+				return -1;
 			}
 		}
 		// if we have reached here addr is available do whatever comes next
-    cprintf("ADDR:%d\n", addr);
+    // cprintf("ADDR:%d\n", addr);
     mappages(p->pgdir, addr, length, V2P(kalloc()), 0);
-    return addr;
+    cprintf("ADDR:%d\n", addr);
+
+    return (int) addr;
 	}
-	
-	return (void*) -1;
+	cprintf("return -1\n");
+	return -1;
 }
 
 int 
