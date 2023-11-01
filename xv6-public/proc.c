@@ -533,17 +533,26 @@ procdump(void)
   }
 }
 
-void* mmap(void* addr, int length, int prot, int flags, int fd, int offset){
+void* 
+mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 	struct proc *p = myproc();
-	//if not map fixed two forloops one through addresses and inner through va array
+	// if not map fixed two forloops one through addresses and inner through va array
 	if(flags == 0x000e){// anon + fixed + shared
 		for(int i = 0; i < 32; i++){
-			if(p->va[i] == 0){
+			if(p->va[i].valid == 0){
 				continue;
-			}else if((p->va[i]->start_ad <= addr) && (p->va[i]->end_ad > addr) && p->va[i]->valid){
+			}else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr) && p->va[i].valid){
 				return (void*) -1;
 			}
 		}
 		// if we have reached here addr is available do whatever comes next
 	}
+	
+	return (void*) -1;
+}
+
+int 
+munmap(void *addr, int length) 
+{
+  return 0;
 }

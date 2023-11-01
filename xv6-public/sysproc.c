@@ -100,8 +100,8 @@ int sys_mmap(void){
 	int fd;
 	struct file *pf;
 	int offset;
-	
-	if(argptr(0, (void*)&addr) < 0){
+
+	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
 	if(argint(1, &length) < 0){
@@ -129,11 +129,12 @@ int sys_mmap(void){
 	// if MAP_FIXED set
 	if ((flags & MAP_FIXED) / 8 == 1) {
 		// check valid addr
-		if ((int) addr < MMAPSTART || (int) addr >= KERNBASE) {
-			return -1;
+		if (addr < (void *)MMAPSTART || addr >= (void *)KERNBASE)
+		{
+	   	    return -1;
 		}
 		// check addr multiple of page size
-		if ((int) addr % PGSIZE != 0) {
+		if ((uint) addr % PGSIZE != 0) {
 			return -1;
 		}
 		// map cant be fixed and anonymous at the same time
@@ -147,7 +148,9 @@ int sys_mmap(void){
 		return -1;
 	}
 
-	mmap(&addr, &length, &prot, &flags, &fd, &offset);
+	// error if map anonymous and ?? both set
+
+	mmap(&addr, length, prot, flags, fd, offset);
 	return 0;
 }
 
@@ -155,13 +158,15 @@ int sys_mmap(void){
 int sys_munmap(void){
 	void* addr;
 	int length;
-	if(argint(0, &addr) < 0){
+
+	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
 	if(argint(0, &length) < 0){
 		return -1;
 	}
-	munmap(&addr, &length);
+
+	munmap(&addr, length);
 	return 0;
 }
 
