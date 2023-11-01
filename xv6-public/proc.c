@@ -7,6 +7,7 @@
 #include "proc.h"
 #include "spinlock.h"
 #include "mmap.h"
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -535,9 +536,12 @@ procdump(void)
 
 void* 
 mmap(void* addr, int length, int prot, int flags, int fd, int offset){
+  cprintf("in mmap\n");
+  cprintf("addr mmap:%d\n", addr);
 	struct proc *p = myproc();
 	// if not map fixed two forloops one through addresses and inner through va array
 	if(flags == 0x000e){// anon + fixed + shared
+    cprintf("yes flags\n");
 		for(int i = 0; i < 32; i++){
 			if(p->va[i].valid == 0){
 				continue;
@@ -546,6 +550,9 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 			}
 		}
 		// if we have reached here addr is available do whatever comes next
+    cprintf("ADDR:%d\n", addr);
+    mappages(p->pgdir, addr, length, V2P(kalloc()), 0);
+    return addr;
 	}
 	
 	return (void*) -1;
