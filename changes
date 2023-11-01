@@ -2,3 +2,6 @@ Changes made:
 Pari: added MMAPSTART to memlayout.h
 made mmap.h
 added mmap and munmap to syscall.c, syscall.h, user.h, usys.S
+sysproc.c - added sys_mmap
+proc.h - added sstruct virtualAddress
+

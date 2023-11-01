@@ -32,6 +32,17 @@ struct context {
   uint eip;
 };
 
+// virtual address
+struct virtualAddress {
+  int valid;
+  (void*) start_ad;
+  (void*) end_ad;
+  int len;
+  int prot;
+  int flags;
+  int fd;
+}
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -56,3 +67,4 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
