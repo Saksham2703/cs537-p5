@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "mmap.h"
 
 int
 sys_fork(void)
@@ -98,7 +99,8 @@ int sys_mmap(void){
 	int flags;
 	int fd;
 	int offset;
-	if(argint(0, &addr) < 0){
+	
+	if(argptr(0, (void*)&addr) < 0){
 		return -1;
 	}
 	if(argint(1, &length) < 0){
@@ -116,6 +118,25 @@ int sys_mmap(void){
 	if(argint(5, &offset) < 0){
 		return -1;
 	}
+
+	// check for valid args
+	// invalid length
+	if (length <= 0) {
+		return -1;
+	}
+
+	// if MAP_FIXED set
+	if ((flags & MAP_FIXED) / 8 == 1) {
+		// check valid addr
+		if ((int) addr < MMAPSTART || (int) addr >= KERNBASE) {
+			return -1;
+		}
+		// check addr multiple of page size
+		if ((int) addr % PGSIZE != 0) {
+			return -1;
+		}
+	}
+
 	mmap(&addr, &length, &prot, &flags, &fd, &offset);
 	return 0;
 }
@@ -133,3 +154,4 @@ int sys_munmap(void){
 	munmap(&addr, &length);
 	return 0;
 }
+
