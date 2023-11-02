@@ -238,6 +238,13 @@ exit(void)
   if(curproc == initproc)
     panic("init exiting");
 
+  for(;;){
+    if(curproc->va[0].valid == 0){
+      break;
+    }
+    munmap(curproc->va[0].start_ad, curproc->va[0].len);
+  }
+
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
     if(curproc->ofile[fd]){
