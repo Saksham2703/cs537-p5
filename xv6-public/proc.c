@@ -536,12 +536,12 @@ procdump(void)
 
 int
 mmap(void* addr, int length, int prot, int flags, int fd, int offset){
-  cprintf("in mmap\n");
-  cprintf("addr mmap:%d\n", addr);
+  // cprintf("in mmap\n");
+  // cprintf("addr mmap:%d\n", addr);
 	struct proc *p = myproc();
-  int numpages = (length / PGSIZE) + ((length % PGSIZE) != 0);
+  int numpages = (length / PGSIZE) + ((length % PGSIZE) != 0) + ((flags & MAP_GROWSUP) == MAP_GROWSUP);
   // cprintf("num pages %d\n", numpages);
-  int index = 0;
+  int index = -1;
 
 	// if not map fixed two forloops one through addresses and inner through va array
   if((flags & MAP_FIXED) == MAP_FIXED){
@@ -552,7 +552,7 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 			} else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr)){ // if addr wanted is already taken
 				return -1;
 			} else if(p->va[i].start_ad > addr){
-        if((p->va[i].start_ad - addr) < length){
+        if(((p->va[i].start_ad - addr)/PGSIZE) < numpages){
           return -1;
         }
         else{
@@ -565,11 +565,58 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
       }
     }
   }else{
-
+    int pages = (KERNBASE - MMAPSTART) / PGSIZE;
+    int jump = 100;
+    for(int k = 0; k < 100; k++){
+      for(int j = k; j < pages; j += jump){
+        addr = (void*) (j*PGSIZE) + MMAPSTART;
+        for(int i = 0; i < 32; i++){
+			    if(p->va[i].valid == 0){
+            index = i;
+				    break;
+		    	} else if((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr)){ // if addr wanted is already taken
+		    		break;
+          } else if(p->va[i].start_ad > addr){
+            if(((p->va[i].start_ad - addr)/PGSIZE) < numpages){
+              break;
+            }
+            else{
+              index = i;
+              break;
+            }
+          }else{
+            cprintf("error in find address\n");
+            return -1;
+          }
+        }
+        if(index != -1){
+          break;
+        }
+      }
+      if(index != -1){
+        break;
+      }
+    }
   }
-  
+
+  if(index == -1){
+    return -1;
+  }
+  cprintf("addr = %d\n", addr);
+  numpages -= ((flags & MAP_GROWSUP) == MAP_GROWSUP);
   for (int i = 0; i < numpages; i++){
-    mappages(p->pgdir, (addr + (i * PGSIZE)), PGSIZE, V2P(kalloc()), 0);
+    char *mem;
+    mem = kalloc();
+
+    if(mem == 0) {
+      cprintf("kalloc failed\n");
+      return -1;
+    }
+    memset(mem, 0, PGSIZE);
+    if (mappages(p->pgdir, (addr + (i * PGSIZE)), PGSIZE, V2P(mem), prot | PTE_U) == -1) {
+      cprintf("Mappages returned -1.\n");
+      return -1;
+    }
   }
 
   // shift proc va array
@@ -591,17 +638,24 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
 int 
 munmap(void *addr, int length) 
 {
+  // correct implementation
   struct proc *p = myproc();
   int index = -1;
   for(int i = 0; i < 32; i++){
     if(p->va[i].start_ad == addr){
       index = i;
       break;
+    } else if ((p->va[i].start_ad <= addr) && (p->va[i].end_ad > addr)) {
+      index = i;
+      addr = p->va[i].start_ad;
+      break;
     }
   }
+
   if(index == -1){
     return -1;
   }
+
   for(int i = index; i < 32; i++){
     if(p->va[i].valid == 0){
       break;
@@ -609,5 +663,11 @@ munmap(void *addr, int length)
       p->va[i] = p->va[i + 1];
     }
   }
+
+  cprintf("freeing addr:%d\n", (void*)walkpgdir(p->pgdir, addr, 0));
+  pde_t* pa = walkpgdir(p->pgdir, addr, 0);
+  int a = PTE_ADDR(*pa);
+  kfree(P2V(a));
+  *pa = 0;
   return 0;
 }
