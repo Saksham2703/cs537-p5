@@ -41,6 +41,7 @@ struct virtualAddress {
   int prot;
   int flags;
   int fd;
+  struct file* f;
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };

@@ -118,7 +118,7 @@ int sys_mmap(void){
 	int prot;
 	int flags;
 	int fd;
-	struct file *pf;
+	struct file *fp;
 	int offset;
 
 	// cprintf("actual addr:%d\n", 0x60020000);
@@ -161,15 +161,18 @@ int sys_mmap(void){
 
 	// if not MAP_ANONYMOUS, get file descriptor
 	if ((flags & MAP_ANONYMOUS) == 0) {
-		if(argfd(4, &fd, &pf) < 0){ // changed this from argfd to argint
+		if(argfd(4, &fd, &fp) < 0){
 			return -1;
 		}
+		// Duplicate the file so it will work even when the descriptor is closed
+		filedup(fp);
 	} else {
 		fd = -1;
+		fp = 0;
 	}
 
-	// if MAP_SHARED and MAP_PRIVATE set together
-	if((flags & (MAP_SHARED | MAP_PRIVATE)) == 3){
+	// if MAP_SHARED and MAP_PRIVATE set together or none set
+	if((flags & (MAP_SHARED | MAP_PRIVATE)) == 3 || (flags & (MAP_SHARED | MAP_PRIVATE)) == 0){
 		return -1;
 	}
 
@@ -183,7 +186,7 @@ int sys_mmap(void){
 
 	// error if map anonymous and ?? both set
 	cprintf("addr passing in:%d\n", addr);
-	return mmap(addr, length, prot, flags, fd, offset);
+	return mmap(addr, length, prot, flags, fd, offset, fp);
 }
 
 // munmap

@@ -120,8 +120,8 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int 			mmap(void *addr, int length, int prot, int flags, int fd, int offset);
-int				munmap(void* addr, int length);
+int 			mmap(void*, int, int, int, int, int, struct file*);
+int				munmap(void*, int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

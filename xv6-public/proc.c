@@ -6,6 +6,9 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 #include "mmap.h"
 
 struct {
@@ -535,16 +538,20 @@ procdump(void)
 }
 
 int
-mmap(void* addr, int length, int prot, int flags, int fd, int offset){
+mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct file* fp){
   // cprintf("in mmap\n");
   // cprintf("addr mmap:%d\n", addr);
 	struct proc *p = myproc();
-  int numpages = (length / PGSIZE) + ((length % PGSIZE) != 0) + ((flags & MAP_GROWSUP) == MAP_GROWSUP);
+  int isgrowsup = ((flags & MAP_GROWSUP) == MAP_GROWSUP);
+  int isanon = ((flags & MAP_ANON) == MAP_ANON);
+  int isfixed = ((flags & MAP_FIXED) == MAP_FIXED);
+
+  int numpages = (length / PGSIZE) + ((length % PGSIZE) != 0) + isgrowsup;
   // cprintf("num pages %d\n", numpages);
   int index = -1;
 
 	// if not map fixed two forloops one through addresses and inner through va array
-  if((flags & MAP_FIXED) == MAP_FIXED){
+  if(isfixed){
     for(int i = 0; i < 32; i++){
 			if(p->va[i].valid == 0){
         index = i;
@@ -599,21 +606,42 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
     }
   }
 
+
   if(index == -1){
     return -1;
   }
   cprintf("addr = %d\n", addr);
-  numpages -= ((flags & MAP_GROWSUP) == MAP_GROWSUP);
-  for (int i = 0; i < numpages; i++){
-    char *mem;
-    mem = kalloc();
+  numpages -= isgrowsup;
 
+  for (int i = 0; i < numpages; i++){
+    int pageoffset = i * PGSIZE;
+    char *mem;
+
+    mem = kalloc();
     if(mem == 0) {
       cprintf("kalloc failed\n");
       return -1;
     }
+
     memset(mem, 0, PGSIZE);
-    if (mappages(p->pgdir, (addr + (i * PGSIZE)), PGSIZE, V2P(mem), prot | PTE_U) == -1) {
+    // if not anonymous then read from file
+    if (!isanon) {
+      // cprintf("reading file\n");
+      if ((length - pageoffset)  >= PGSIZE) {
+        if (fileread(fp, (mem + pageoffset), PGSIZE) < 0) {
+          cprintf("fileread error\n");
+          return -1;
+        }
+      } else {
+        if (fileread(fp, (mem + pageoffset), (length - pageoffset)) < 0) {
+          cprintf("fileread error\n");
+          return -1;
+        }
+      }
+      // cprintf("file read in\n");
+    }
+    // map to page table entry
+    if (mappages(p->pgdir, (addr + pageoffset), PGSIZE, V2P(mem), prot | PTE_U) == -1) {
       cprintf("Mappages returned -1.\n");
       return -1;
     }
@@ -630,16 +658,18 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset){
   p->va[index].len = length;
   p->va[index].prot = prot;
   p->va[index].flags = flags;
+  p->va[index].f = fp;
 
   cprintf("ADDR:%d\n", addr);
   return (int) p->va[index].start_ad;
 }
 
 int 
-munmap(void *addr, int length) 
+munmap(void *addr, int length)
 {
   // correct implementation
   struct proc *p = myproc();
+
   int index = -1;
   for(int i = 0; i < 32; i++){
     if(p->va[i].start_ad == addr){
@@ -652,10 +682,36 @@ munmap(void *addr, int length)
     }
   }
 
+  // if addr not mapped
   if(index == -1){
     return -1;
   }
 
+  int isanon = ((p->va[index].flags & MAP_ANON) == MAP_ANON);
+
+  // if not MAP_ANONYMOUS, write to file
+  if (!isanon) {
+    p->va[index].f->off = 0;
+    struct file* fp = p->va[index].f;
+
+    for (int i = 0; p->va[index].len > 0; i++) {
+      if (p->va[index].len > PGSIZE) {
+        if (filewrite(fp, (p->va[index].start_ad + (i * PGSIZE)), PGSIZE) < 0) {
+          cprintf("Filewrite error\n");
+          return -1;
+        }
+      } else {
+        if (filewrite(fp, (p->va[index].start_ad + (i * PGSIZE)), p->va[index].len) < 0) {
+          cprintf("Filewrite error\n");
+          return -1;
+        }
+      }
+      
+      p->va[index].len -= PGSIZE;
+    }
+  }
+
+  // shift by left to remove virtualAddress mapping from array
   for(int i = index; i < 32; i++){
     if(p->va[i].valid == 0){
       break;
