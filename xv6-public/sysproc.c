@@ -125,8 +125,10 @@ int sys_mmap(void){
 	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
-	cprintf("addr we got:%d\n", addr);
+
+	// cprintf("addr we got:%d\n", addr);
 	// cprintf("got args 1\n");
+
 	if(argint(1, &length) < 0){
 		return -1;
 	}
@@ -185,7 +187,7 @@ int sys_mmap(void){
 
 
 	// error if map anonymous and ?? both set
-	cprintf("addr passing in:%d\n", addr);
+	// cprintf("addr passing in:%d\n", addr);
 	return mmap(addr, length, prot, flags, fd, offset, fp);
 }
 

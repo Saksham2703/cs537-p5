@@ -93,6 +93,14 @@ exec(char *path, char **argv)
       last = s+1;
   safestrcpy(curproc->name, last, sizeof(curproc->name));
 
+  // // unmap all mappings
+  for(;;){
+    if(curproc->va[0].valid == 0){
+      break;
+    }
+    munmap(curproc->va[0].start_ad, curproc->va[0].len);
+  }
+
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;

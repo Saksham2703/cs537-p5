@@ -204,6 +204,14 @@ fork(void)
   np->parent = curproc;
   *np->tf = *curproc->tf;
 
+  // copy all mappings
+  // for (int i = 0;i < 32; i++) {
+  //   if (curproc->va[i].valid == 0) {
+  //     break;
+  //   }
+  //   np->va[i] = curproc->va[i];
+  // }
+
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -238,6 +246,7 @@ exit(void)
   if(curproc == initproc)
     panic("init exiting");
 
+  // unmap all mappings
   for(;;){
     if(curproc->va[0].valid == 0){
       break;
@@ -617,7 +626,7 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
   if(index == -1){
     return -1;
   }
-  cprintf("addr = %d\n", addr);
+  // cprintf("addr = %d\n", addr);
   numpages -= isgrowsup;
 
   for (int i = 0; i < numpages; i++){
@@ -667,7 +676,7 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
   p->va[index].flags = flags;
   p->va[index].f = fp;
 
-  cprintf("ADDR:%d\n", addr);
+  // cprintf("ADDR:%d\n", addr);
   return (int) p->va[index].start_ad;
 }
 
