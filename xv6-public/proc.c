@@ -205,12 +205,46 @@ fork(void)
   *np->tf = *curproc->tf;
 
   // copy all mappings
-  // for (int i = 0;i < 32; i++) {
-  //   if (curproc->va[i].valid == 0) {
-  //     break;
-  //   }
-  //   np->va[i] = curproc->va[i];
-  // }
+  for (int i = 0;i < 32; i++) {
+    if (curproc->va[i].valid == 0) {
+      break;
+    }
+    if((curproc->va[i].flags & MAP_SHARED) == MAP_SHARED){
+      //mapshared
+      int numpages = (curproc->va[i].len/PGSIZE) + ((curproc->va[i].len%PGSIZE) != 0);
+      for(int j = 0; j < numpages; j++){
+        void* addr = curproc->va[i].start_ad + i*PGSIZE;
+        pde_t* pa = walkpgdir(curproc->pgdir, addr, 0);
+        int a = PTE_ADDR(*pa);
+        if (mappages(np->pgdir, addr, PGSIZE, a, curproc->va[i].prot | PTE_U) == -1){
+          return -1;
+        }
+      }
+    }else{
+      //map private
+      int numpages = (curproc->va[i].len/PGSIZE) + ((curproc->va[i].len%PGSIZE) != 0);
+      for(int j = 0; j < numpages; j++){
+        void* addr = curproc->va[i].start_ad + i*PGSIZE;
+        pde_t* pa = walkpgdir(curproc->pgdir, addr, 0);
+        void* a = (void*) PTE_ADDR(*pa);
+        cprintf("allocationg space\n");
+        char* mem = kalloc();
+        if(mem == 0) {
+          cprintf("kalloc failed\n");
+          return -1;
+        }
+
+        memset(mem, 0, PGSIZE);
+        cprintf("copying data\n");
+        memmove(mem, P2V(a), PGSIZE);
+        cprintf("data copied\n");
+        if (mappages(np->pgdir, addr, PGSIZE, V2P(mem), curproc->va[i].prot | PTE_U) == -1){
+          return -1;
+        }
+        cprintf("mappages done\n");
+      }
+    }
+  }
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -704,9 +738,10 @@ munmap(void *addr, int length)
   }
 
   int isanon = ((p->va[index].flags & MAP_ANON) == MAP_ANON);
+  int isprivate = ((p->va[index].flags & MAP_PRIVATE) == MAP_PRIVATE);
 
   // if not MAP_ANONYMOUS, write to file
-  if (!isanon) {
+  if (!isanon && !isprivate) {
     p->va[index].f->off = 0;
     struct file* fp = p->va[index].f;
 
