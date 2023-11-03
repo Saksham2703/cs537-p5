@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "mmap.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -77,6 +78,62 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    /* CASE - MAP_GROWSUP*/
+    void* curaddr = (void*) rcr2();
+    // cprintf("addr:0x%x\n", curaddr);
+    for (int i = 0; i < 32; i++) {
+      // cprintf("i:%d\tvalid:%d\tstart_addr:0x%x\tend_addr:0x%x\n", i, myproc()->va[i].valid, myproc()->va[i].start_ad, myproc()->va[i].end_ad);
+
+      if (myproc()->va[i].valid == 0) {
+        cprintf("Segmentation Fault\n");
+        // kill the process
+        myproc()->killed = 1;
+        break;
+      }
+
+      if (myproc()->va[i].end_ad < curaddr && (myproc()->va[i].end_ad + PGSIZE) > curaddr) {
+        // cprintf("in first if\n");
+        if ((myproc()->va[i].flags & MAP_GROWSUP) == MAP_GROWSUP) {
+          // cprintf("growsup!!!\n");
+          if (i != 31 && myproc()->va[i + 1].valid == 1 && ((myproc()->va[i + 1].start_ad - myproc()->va[i + 1].end_ad) < (2 * PGSIZE))) {
+            cprintf("Segmentation Fault\n");
+            // kill the process
+            myproc()->killed = 1;
+            break;
+          } else {
+            char *mem;
+
+            mem = kalloc();
+            if(mem == 0) {
+              // kill the process
+              myproc()->killed = 1;
+              break;
+            }
+
+            memset(mem, 0, PGSIZE);
+            if (mappages(myproc()->pgdir, (myproc()->va[i].end_ad + 1), PGSIZE, V2P(mem), myproc()->va[i].prot | PTE_U) == -1) {
+              cprintf("Mappages returned -1.\n");
+              // kill the process
+              myproc()->killed = 1;
+              break;
+            }
+
+            myproc()->va[i].end_ad += PGSIZE;
+            // cprintf("DONEEEEE!!!!\n");
+            break;
+          }
+        } else {
+          cprintf("Segmentation Fault\n");
+          // kill the process
+          myproc()->killed = 1;
+          break;
+        }
+      }
+    }
+    
+    break;
+
 
   //PAGEBREAK: 13
   default:

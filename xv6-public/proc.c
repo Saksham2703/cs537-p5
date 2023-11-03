@@ -600,9 +600,10 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
   // cprintf("num pages %d\n", numpages);
   int index = -1;
 
-	// if not map fixed two forloops one through addresses and inner through va array
+	// if map fixed
   if(isfixed){
     for(int i = 0; i < 32; i++){
+      cprintf("i:%d\tvalid:%d\tstart_addr:0x%x\tend_addr:0x%x\n", i, myproc()->va[i].valid, myproc()->va[i].start_ad, myproc()->va[i].end_ad);
 			if(p->va[i].valid == 0){
         index = i;
 				break;
@@ -616,16 +617,18 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
           index = i;
           break;
         }
-      }else{
-        cprintf("error in map_fixed\n");
-        return -1;
       }
     }
-  }else{
+
+    // check for illegal guard page access
+    if ((index != 0) && ((p->va[index -1].flags & MAP_GROWSUP) == MAP_GROWSUP) && ((p->va[index-1].end_ad + PGSIZE) >= addr)){
+      return -1;
+    }
+  } else {
     int pages = (KERNBASE - MMAPSTART) / PGSIZE;
     int jump = 100;
     for(int k = 0; k < 100; k++){
-      for(int j = k; j < pages; j += jump){
+      for(int j = k; j < pages; j += jump) {
         addr = (void*) (j*PGSIZE) + MMAPSTART;
         for(int i = 0; i < 32; i++){
 			    if(p->va[i].valid == 0){
@@ -647,6 +650,10 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
           }
         }
         if(index != -1){
+          // check for illegal guard page access
+          if ((index != 0) && ((p->va[index -1].flags & MAP_GROWSUP) == MAP_GROWSUP) && ((p->va[index-1].end_ad + PGSIZE) >= addr)){
+            continue;
+          }
           break;
         }
       }
@@ -771,7 +778,7 @@ munmap(void *addr, int length)
     }
   }
 
-  cprintf("freeing addr:%d\n", (void*)walkpgdir(p->pgdir, addr, 0));
+  // cprintf("freeing addr:%d\n", (void*)walkpgdir(p->pgdir, addr, 0));
   pde_t* pa = walkpgdir(p->pgdir, addr, 0);
   int a = PTE_ADDR(*pa);
   kfree(P2V(a));
