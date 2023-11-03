@@ -227,7 +227,6 @@ fork(void)
         void* addr = curproc->va[i].start_ad + i*PGSIZE;
         pde_t* pa = walkpgdir(curproc->pgdir, addr, 0);
         void* a = (void*) PTE_ADDR(*pa);
-        cprintf("allocationg space\n");
         char* mem = kalloc();
         if(mem == 0) {
           cprintf("kalloc failed\n");
@@ -235,13 +234,10 @@ fork(void)
         }
 
         memset(mem, 0, PGSIZE);
-        cprintf("copying data\n");
         memmove(mem, P2V(a), PGSIZE);
-        cprintf("data copied\n");
         if (mappages(np->pgdir, addr, PGSIZE, V2P(mem), curproc->va[i].prot | PTE_U) == -1){
           return -1;
         }
-        cprintf("mappages done\n");
       }
     }
   }
@@ -603,7 +599,6 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
 	// if map fixed
   if(isfixed){
     for(int i = 0; i < 32; i++){
-      cprintf("i:%d\tvalid:%d\tstart_addr:0x%x\tend_addr:0x%x\n", i, myproc()->va[i].valid, myproc()->va[i].start_ad, myproc()->va[i].end_ad);
 			if(p->va[i].valid == 0){
         index = i;
 				break;
@@ -644,9 +639,6 @@ mmap(void* addr, int length, int prot, int flags, int fd, int offset, struct fil
               index = i;
               break;
             }
-          }else{
-            cprintf("error in find address\n");
-            return -1;
           }
         }
         if(index != -1){

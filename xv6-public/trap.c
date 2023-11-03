@@ -81,7 +81,6 @@ trap(struct trapframe *tf)
   case T_PGFLT:
     /* CASE - MAP_GROWSUP*/
     void* curaddr = (void*) rcr2();
-    // cprintf("addr:0x%x\n", curaddr);
     for (int i = 0; i < 32; i++) {
       // cprintf("i:%d\tvalid:%d\tstart_addr:0x%x\tend_addr:0x%x\n", i, myproc()->va[i].valid, myproc()->va[i].start_ad, myproc()->va[i].end_ad);
 
@@ -93,9 +92,7 @@ trap(struct trapframe *tf)
       }
 
       if (myproc()->va[i].end_ad < curaddr && (myproc()->va[i].end_ad + PGSIZE) > curaddr) {
-        // cprintf("in first if\n");
         if ((myproc()->va[i].flags & MAP_GROWSUP) == MAP_GROWSUP) {
-          // cprintf("growsup!!!\n");
           if (i != 31 && myproc()->va[i + 1].valid == 1 && ((myproc()->va[i + 1].start_ad - myproc()->va[i + 1].end_ad) < (2 * PGSIZE))) {
             cprintf("Segmentation Fault\n");
             // kill the process
@@ -120,7 +117,7 @@ trap(struct trapframe *tf)
             }
 
             myproc()->va[i].end_ad += PGSIZE;
-            // cprintf("DONEEEEE!!!!\n");
+            myproc()->va[i].len += PGSIZE;
             break;
           }
         } else {

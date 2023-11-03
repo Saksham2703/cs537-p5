@@ -121,26 +121,18 @@ int sys_mmap(void){
 	struct file *fp;
 	int offset;
 
-	// cprintf("actual addr:%d\n", 0x60020000);
 	if(argint(0, (void*)&addr) < 0){
 		return -1;
 	}
-
-	// cprintf("addr we got:%d\n", addr);
-	// cprintf("got args 1\n");
-
 	if(argint(1, &length) < 0){
 		return -1;
 	}
-	// cprintf("got args 2\n");
 	if(argint(2, &prot) < 0){
 		return -1;
 	}
-	// cprintf("got args 3\n");
 	if(argint(3, &flags) < 0){
 		return -1;
 	}
-	// cprintf("got args 4\n");
 
 	// check for valid args
 	// invalid length
@@ -178,16 +170,11 @@ int sys_mmap(void){
 		return -1;
 	}
 
-	// cprintf("got args 5\n");
 	if(argint(5, &offset) < 0){
 		return -1;
 	}
 
-	// cprintf("got all args\n");
-
-
 	// error if map anonymous and ?? both set
-	// cprintf("addr passing in:%d\n", addr);
 	return mmap(addr, length, prot, flags, fd, offset, fp);
 }
 
